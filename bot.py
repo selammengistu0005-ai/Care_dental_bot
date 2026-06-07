@@ -1,5 +1,7 @@
 import logging
 import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from datetime import date, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -422,13 +424,13 @@ async def book_time_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     summary = (
         "📋 *Booking Summary*\n\n"
-        f"🦷 *Service:*   {esc(b['service'])}\n"
-        f"👤 *Name:*      {esc(b['full_name'])}\n"
-        f"📧 *Email:*     {esc(b['email'])}\n"
-        f"📞 *Phone:*     {esc(b['phone'])}\n"
-        f"🏦 *Bank:*      {esc(b['bank'])}\n"
-        f"📅 *Date:*      {esc(b['date'])}\n"
-        f"🕐 *Time:*      {esc(b['time'])}\n\n"
+        f"🦷 *Service:* {esc(b['service'])}\n"
+        f"👤 *Name:* {esc(b['full_name'])}\n"
+        f"📧 *Email:* {esc(b['email'])}\n"
+        f"📞 *Phone:* {esc(b['phone'])}\n"
+        f"🏦 *Bank:* {esc(b['bank'])}\n"
+        f"📅 *Date:* {esc(b['date'])}\n"
+        f"🕐 *Time:* {esc(b['time'])}\n\n"
         "_Please review your details above and tap *Confirm Booking* to finalise\\._"
     )
     await query.edit_message_text(
@@ -494,6 +496,26 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
+# ── Render Health Check Server ────────────────────────────────────────────────
+
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"Bot is alive!")
+
+    def log_message(self, format, *args):
+        pass  # Silences internal server log lines to keep Render deployment streams clean
+
+
+def run_health_server():
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
+    logger.info(f"Health check server started on port {port}")
+    server.serve_forever()
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -547,6 +569,10 @@ def main() -> None:
 
     app.add_handler(conv)
     logger.info("Care Dental Clinic bot running...")
+    
+    # Start the dummy web server background thread so Render doesn't time out
+    threading.Thread(target=run_health_server, daemon=True).start()
+
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
