@@ -1,7 +1,5 @@
 import logging
 import os
-import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
 from datetime import date, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -20,6 +18,8 @@ logger = logging.getLogger(__name__)
 TOKEN = os.environ.get("BOT_TOKEN")
 if not TOKEN:
     raise ValueError("BOT_TOKEN environment variable is not set!")
+
+WEBHOOK_URL = "https://care-dental-bot-naq9.onrender.com"
 
 # ── Conversation states ──────────────────────────────────────────────────────
 (
@@ -298,7 +298,7 @@ async def nav_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 async def book_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
-    context.user_data.pop("booking", None)   # clear any previous booking draft
+    context.user_data.pop("booking", None)
     await query.edit_message_text(
         "📅 *Book an Appointment*\n\n_Step 1 of 7_ — Please choose a service:",
         parse_mode="MarkdownV2",
@@ -400,7 +400,7 @@ async def book_to_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 async def book_date_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
-    chosen_date = query.data.split(":", 1)[1]   # ISO format: YYYY-MM-DD
+    chosen_date = query.data.split(":", 1)[1]
     d = date.fromisoformat(chosen_date)
     label = d.strftime("%A, %d %B %Y")
     context.user_data.setdefault("booking", {})["date"] = label
@@ -424,13 +424,13 @@ async def book_time_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     summary = (
         "📋 *Booking Summary*\n\n"
-        f"🦷 *Service:* {esc(b['service'])}\n"
-        f"👤 *Name:* {esc(b['full_name'])}\n"
-        f"📧 *Email:* {esc(b['email'])}\n"
-        f"📞 *Phone:* {esc(b['phone'])}\n"
-        f"🏦 *Bank:* {esc(b['bank'])}\n"
-        f"📅 *Date:* {esc(b['date'])}\n"
-        f"🕐 *Time:* {esc(b['time'])}\n\n"
+        f"🦷 *Service:*   {esc(b['service'])}\n"
+        f"👤 *Name:*      {esc(b['full_name'])}\n"
+        f"📧 *Email:*     {esc(b['email'])}\n"
+        f"📞 *Phone:*     {esc(b['phone'])}\n"
+        f"🏦 *Bank:*      {esc(b['bank'])}\n"
+        f"📅 *Date:*      {esc(b['date'])}\n"
+        f"🕐 *Time:*      {esc(b['time'])}\n\n"
         "_Please review your details above and tap *Confirm Booking* to finalise\\._"
     )
     await query.edit_message_text(
@@ -496,26 +496,6 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
-# ── Render Health Check Server ────────────────────────────────────────────────
-
-class HealthCheckHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/plain")
-        self.end_headers()
-        self.wfile.write(b"Bot is alive!")
-
-    def log_message(self, format, *args):
-        pass  # Silences internal server log lines to keep Render deployment streams clean
-
-
-def run_health_server():
-    port = int(os.environ.get("PORT", 8080))
-    server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
-    logger.info(f"Health check server started on port {port}")
-    server.serve_forever()
-
-
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -568,12 +548,15 @@ def main() -> None:
     )
 
     app.add_handler(conv)
-    logger.info("Care Dental Clinic bot running...")
-    
-    # Start the dummy web server background thread so Render doesn't time out
-    threading.Thread(target=run_health_server, daemon=True).start()
 
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    PORT = int(os.environ.get("PORT", 8443))
+
+    logger.info("Care Dental Clinic bot running via webhook...")
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        webhook_url=f"{WEBHOOK_URL}/{TOKEN}",
+    )
 
 
 if __name__ == "__main__":
