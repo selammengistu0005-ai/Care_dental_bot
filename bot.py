@@ -547,7 +547,7 @@ def main() -> None:
 
     app.add_handler(conv)
 
-    PORT = int(os.environ.get("PORT", 8443))
+    PORT = int(os.environ.get("PORT", 10000))
     logger.info("Care Dental Clinic bot running via webhook...")
     app.run_webhook(
         listen="0.0.0.0",
