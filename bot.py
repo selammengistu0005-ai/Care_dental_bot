@@ -1,6 +1,9 @@
 import logging
 import os
+import threading
 from datetime import date, timedelta
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -296,7 +299,7 @@ async def nav_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 async def book_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
-    context.user_data.pop("booking", None)   # clear any previous booking draft
+    context.user_data.pop("booking", None)
     await query.edit_message_text(
         "📅 *Book an Appointment*\n\n_Step 1 of 7_ — Please choose a service:",
         parse_mode="MarkdownV2",
@@ -398,7 +401,7 @@ async def book_to_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 async def book_date_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
-    chosen_date = query.data.split(":", 1)[1]   # ISO format: YYYY-MM-DD
+    chosen_date = query.data.split(":", 1)[1]
     d = date.fromisoformat(chosen_date)
     label = d.strftime("%A, %d %B %Y")
     context.user_data.setdefault("booking", {})["date"] = label
@@ -494,9 +497,28 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
+# ── Health check server (keeps Render web service alive) ─────────────────────
+
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+    def log_message(self, format, *args):
+        pass  # silence noisy access logs
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    # Start a lightweight HTTP server so Render's health checks get a 200 OK
+    PORT = int(os.environ.get("PORT", 10000))
+    health_server = HTTPServer(("0.0.0.0", PORT), HealthHandler)
+    health_thread = threading.Thread(target=health_server.serve_forever, daemon=True)
+    health_thread.start()
+    logger.info(f"Health check server running on port {PORT}")
+
     app = Application.builder().token(TOKEN).build()
 
     conv = ConversationHandler(
@@ -529,7 +551,7 @@ def main() -> None:
                 CallbackQueryHandler(book_cancel,      pattern="^book:cancel$"),
             ],
             BOOK_DATE: [
-                CallbackQueryHandler(book_to_date,    pattern="^book:to_date$"),
+                CallbackQueryHandler(book_to_date,     pattern="^book:to_date$"),
                 CallbackQueryHandler(book_date_chosen, pattern="^date:"),
                 CallbackQueryHandler(book_cancel,      pattern="^book:cancel$"),
             ],
@@ -547,13 +569,8 @@ def main() -> None:
 
     app.add_handler(conv)
 
-    PORT = int(os.environ.get("PORT", 10000))
-    logger.info("Care Dental Clinic bot running via webhook...")
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        webhook_url=f"https://care-dental-bot-naq9.onrender.com/{TOKEN}",
-    )
+    logger.info("Care Dental Clinic bot running via polling...")
+    app.run_polling()
 
 
 if __name__ == "__main__":
