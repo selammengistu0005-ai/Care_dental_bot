@@ -19,8 +19,6 @@ TOKEN = os.environ.get("BOT_TOKEN")
 if not TOKEN:
     raise ValueError("BOT_TOKEN environment variable is not set!")
 
-WEBHOOK_URL = "https://care-dental-bot-naq9.onrender.com"
-
 # ── Conversation states ──────────────────────────────────────────────────────
 (
     ASK_NAME,
@@ -298,7 +296,7 @@ async def nav_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 async def book_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
-    context.user_data.pop("booking", None)
+    context.user_data.pop("booking", None)   # clear any previous booking draft
     await query.edit_message_text(
         "📅 *Book an Appointment*\n\n_Step 1 of 7_ — Please choose a service:",
         parse_mode="MarkdownV2",
@@ -400,7 +398,7 @@ async def book_to_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 async def book_date_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
-    chosen_date = query.data.split(":", 1)[1]
+    chosen_date = query.data.split(":", 1)[1]   # ISO format: YYYY-MM-DD
     d = date.fromisoformat(chosen_date)
     label = d.strftime("%A, %d %B %Y")
     context.user_data.setdefault("booking", {})["date"] = label
@@ -550,12 +548,11 @@ def main() -> None:
     app.add_handler(conv)
 
     PORT = int(os.environ.get("PORT", 8443))
-
     logger.info("Care Dental Clinic bot running via webhook...")
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
-        webhook_url=f"{WEBHOOK_URL}/{TOKEN}",
+        webhook_url=f"https://care-dental-bot-naq9.onrender.com/{TOKEN}",
     )
 
 
