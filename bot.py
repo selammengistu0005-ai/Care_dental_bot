@@ -564,7 +564,10 @@ def main() -> None:
                 CallbackQueryHandler(book_cancel,  pattern="^book:cancel$"),
             ],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[
+            CommandHandler("cancel", cancel),
+            CommandHandler("start", start),
+            ],
     )
 
     app.add_handler(conv)
