@@ -30,11 +30,13 @@ if not TOKEN:
     BOOK_FULL_NAME,
     BOOK_EMAIL,
     BOOK_PHONE,
+    BOOK_NOTES,
     BOOK_BANK,
     BOOK_DATE,
     BOOK_TIME,
     BOOK_CONFIRM,
-) = range(10)
+    BOOK_UPLOAD,
+) = range(12)
 
 
 # ── Static texts ─────────────────────────────────────────────────────────────
@@ -55,7 +57,16 @@ SERVICES_TEXT = (
     "*Our Services*\n"
     "\n"
     "From routine checkups to complete smile makeovers, we offer a full range "
-    "of dental treatments tailored to your needs\\."
+    "of dental treatments tailored to your needs\\.\n"
+    "\n"
+    "✨ *Teeth Whitening* — Brighten your smile up to 8 shades\\.\n"
+    "🦷 *Dental Implants* — Permanent, natural\\-looking replacements\\.\n"
+    "🛡️ *Preventive Care* — Routine checkups and cleanings\\.\n"
+    "😁 *Smile Makeover* — Personalised combination of treatments\\.\n"
+    "📐 *Orthodontics* — Braces, aligners and bite correction\\.\n"
+    "🔬 *Root Canal Therapy* — Relieve pain and save your natural tooth\\.\n"
+    "💎 *Cosmetic Dentistry* — Veneers, bonding, contouring and more\\.\n"
+    "🚨 *Emergency Care* — Prompt care when you need it most\\."
 )
 
 ABOUT_TEXT = (
@@ -87,18 +98,50 @@ ABOUT_TEXT = (
     "with complete confidence\\."
 )
 
+TEAM_TEXT = (
+    "_Our Team_\n"
+    "\n"
+    "*Experienced, Caring, Dedicated*\n"
+    "\n"
+    "Behind every great smile is a passionate team of dental professionals "
+    "committed to your health and comfort\\. Our diverse specialists work "
+    "together seamlessly to deliver a complete, personalised care experience\\.\n"
+    "\n"
+    "🦷 *Dentist* — Comprehensive general and restorative dental care\\.\n"
+    "🔪 *Surgeon* — Extractions, implants, and advanced procedures\\.\n"
+    "😁 *Orthodontist* — Braces, aligners, and bite correction specialists\\.\n"
+    "🧹 *Hygienist* — Professional cleaning and preventive care\\."
+)
+
 CONTACT_TEXT = (
     "_Get in Touch_\n"
     "\n"
     "*Contact Care Dental Clinic*\n"
     "\n"
     "📞  \\+251 911 234 567\n"
+    "📞  \\+251 911 098 765\n"
     "📧  hello@caredental\\.et\n"
-    "💬  @CareDentalClinic"
+    "💬  @CareDentalClinic\n"
+    "\n"
+    "🕐  Mon – Fri: 8:00am – 6:00pm\n"
+    "🕐  Sat: 9:00am – 2:00pm\n"
+    "\n"
+    "📍  24 Bright Smile Avenue, Suite 101,\n"
+    "      Downtown, New York, NY 10001"
 )
 
-# Services list (shared between display & booking)
-SERVICES = [
+# ── Bookable services (matches website booking modal exactly) ─────────────────
+BOOKING_SERVICES = [
+    ("✨", "Teeth Whitening",  "60 min"),
+    ("🦷", "Dental Implants",  "90 min"),
+    ("🛡️", "Preventive Care",  "45 min"),
+    ("😁", "Smile Makeover",   "120 min"),
+    ("📐", "Orthodontics",     "60 min"),
+    ("💉", "Dental Surgery",   "75 min"),
+]
+
+# ── Display-only services (Services page) ────────────────────────────────────
+DISPLAY_SERVICES = [
     ("✨", "Teeth Whitening"),
     ("🦷", "Dental Implants"),
     ("🛡️", "Preventive Care"),
@@ -109,21 +152,21 @@ SERVICES = [
     ("🚨", "Emergency Care"),
 ]
 
-# Bank accounts: name → (account_number, account_holder)
+# ── Bank accounts: name → (account_number, account_holder) ───────────────────
 BANKS = {
-    "Telebirr":    ("0911 234 567",      "Care Dental Clinic"),
-    "Awash Bank":  ("0134 5678 9012 3",  "Care Dental Clinic PLC"),
-    "CBE Birr":    ("1000 4567 8901 23", "Care Dental Clinic PLC"),
-    "Zemen Bank":  ("2580 1234 5678 9",  "Care Dental Clinic"),
-    "Tsedey Bank": ("3690 8765 4321 0",  "Care Dental Clinic"),
-    "Dashen Bank": ("4801 2345 6789 0",  "Care Dental Clinic PLC"),
-    "Wegagen Bank":("5912 3456 7890 1",  "Care Dental Clinic"),
+    "Telebirr":     ("1234 5678 9012",      "Care Dental Clinic"),
+    "Awash Bank":   ("0123 4567 8901 2345", "Care Dental Clinic"),
+    "CBE Birr":     ("1000 2345 6789 0123", "Care Dental Clinic"),
+    "Zemen Bank":   ("2345 6789 0123 4567", "Care Dental Clinic"),
+    "Tsedey Bank":  ("3456 7890 1234 5678", "Care Dental Clinic"),
+    "Dashen Bank":  ("4567 8901 2345 6789", "Care Dental Clinic"),
+    "Wegagen Bank": ("5678 9012 3456 7890", "Care Dental Clinic"),
 }
 
+# ── Time slots (matches website exactly — 8 slots, no 1:00 PM or 6:00 PM) ────
 TIME_SLOTS = [
-    "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
-    "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM",
-    "5:00 PM", "6:00 PM",
+    "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
+    "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM",
 ]
 
 
@@ -135,18 +178,21 @@ def esc(text: str) -> str:
     return "".join(f"\\{c}" if c in special else c for c in text)
 
 
+# ── Keyboards ─────────────────────────────────────────────────────────────────
+
 def main_menu_keyboard():
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("🏠 Home",     callback_data="nav:home"),
-            InlineKeyboardButton("🦷 Services", callback_data="nav:services"),
+            InlineKeyboardButton("🏠 Home",        callback_data="nav:home"),
+            InlineKeyboardButton("🦷 Services",    callback_data="nav:services"),
         ],
         [
-            InlineKeyboardButton("ℹ️ About",    callback_data="nav:about"),
-            InlineKeyboardButton("📞 Contact",  callback_data="nav:contact"),
+            InlineKeyboardButton("ℹ️ About",       callback_data="nav:about"),
+            InlineKeyboardButton("📞 Contact",     callback_data="nav:contact"),
         ],
         [
             InlineKeyboardButton("📅 Book an Appointment", callback_data="book:start"),
+            InlineKeyboardButton("🦷 Our Services",        callback_data="nav:services"),
         ],
     ])
 
@@ -155,54 +201,76 @@ def services_display_keyboard():
     """Services page — non-clickable service tiles + Book + Back."""
     rows = [
         [
-            InlineKeyboardButton(f"{SERVICES[i][0]} {SERVICES[i][1]}", callback_data="noop"),
-            InlineKeyboardButton(f"{SERVICES[i+1][0]} {SERVICES[i+1][1]}", callback_data="noop"),
+            InlineKeyboardButton(f"{DISPLAY_SERVICES[i][0]} {DISPLAY_SERVICES[i][1]}",   callback_data="noop"),
+            InlineKeyboardButton(f"{DISPLAY_SERVICES[i+1][0]} {DISPLAY_SERVICES[i+1][1]}", callback_data="noop"),
         ]
-        for i in range(0, len(SERVICES), 2)
+        for i in range(0, len(DISPLAY_SERVICES), 2)
     ]
     rows.append([InlineKeyboardButton("📅 Book an Appointment", callback_data="book:start")])
     rows.append([InlineKeyboardButton("🏠 ← Back to Home",      callback_data="nav:home")])
     return InlineKeyboardMarkup(rows)
 
 
-def back_with_book_keyboard():
-    """About / Contact pages — Book + Back."""
+def about_keyboard():
+    """About page — Meet Our Team + Book + Back."""
     return InlineKeyboardMarkup([
+        [InlineKeyboardButton("👥 Meet Our Team",           callback_data="nav:team")],
+        [InlineKeyboardButton("📅 Book an Appointment",     callback_data="book:start")],
+        [InlineKeyboardButton("🏠 ← Back to Home",          callback_data="nav:home")],
+    ])
+
+
+def team_keyboard():
+    """Team page — Book + Back to About."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📅 Book an Appointment", callback_data="book:start")],
+        [InlineKeyboardButton("← Back to About",        callback_data="nav:about")],
+    ])
+
+
+def contact_keyboard():
+    """Contact page — Get Directions + Book + Back."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📍 Get Directions", url="https://maps.google.com/?q=24+Bright+Smile+Avenue+New+York+NY+10001")],
         [InlineKeyboardButton("📅 Book an Appointment", callback_data="book:start")],
         [InlineKeyboardButton("🏠 ← Back to Home",      callback_data="nav:home")],
     ])
 
 
 def booking_services_keyboard():
-    """Step 1 — clickable service selection."""
+    """Step 1 of 5 — clickable service selection, 2 per row."""
     rows = [
         [
-            InlineKeyboardButton(f"{SERVICES[i][0]} {SERVICES[i][1]}",   callback_data=f"bsvc:{SERVICES[i][1]}"),
-            InlineKeyboardButton(f"{SERVICES[i+1][0]} {SERVICES[i+1][1]}", callback_data=f"bsvc:{SERVICES[i+1][1]}"),
+            InlineKeyboardButton(
+                f"{BOOKING_SERVICES[i][0]} {BOOKING_SERVICES[i][1]}",
+                callback_data=f"bsvc:{BOOKING_SERVICES[i][1]}"
+            ),
+            InlineKeyboardButton(
+                f"{BOOKING_SERVICES[i+1][0]} {BOOKING_SERVICES[i+1][1]}",
+                callback_data=f"bsvc:{BOOKING_SERVICES[i+1][1]}"
+            ),
         ]
-        for i in range(0, len(SERVICES), 2)
+        for i in range(0, len(BOOKING_SERVICES), 2)
     ]
     rows.append([InlineKeyboardButton("❌ Cancel Booking", callback_data="book:cancel")])
     return InlineKeyboardMarkup(rows)
 
 
 def bank_keyboard():
-    """Step 5 — bank selection."""
-    rows = [[InlineKeyboardButton(name, callback_data=f"bank:{name}")] for name in BANKS]
+    """Step 2 of 5 — bank selection, 2 per row to match website grid."""
+    bank_names = list(BANKS.keys())
+    rows = []
+    for i in range(0, len(bank_names), 2):
+        row = [InlineKeyboardButton(bank_names[i], callback_data=f"bank:{bank_names[i]}")]
+        if i + 1 < len(bank_names):
+            row.append(InlineKeyboardButton(bank_names[i + 1], callback_data=f"bank:{bank_names[i + 1]}"))
+        rows.append(row)
     rows.append([InlineKeyboardButton("❌ Cancel Booking", callback_data="book:cancel")])
     return InlineKeyboardMarkup(rows)
 
 
-def bank_chosen_keyboard(bank_name: str):
-    """After bank selected — show it as selected + continue."""
-    rows = [[InlineKeyboardButton(f"✅ {bank_name}", callback_data="noop")]]
-    rows.append([InlineKeyboardButton("➡️ Continue to Date", callback_data="book:to_date")])
-    rows.append([InlineKeyboardButton("❌ Cancel Booking",   callback_data="book:cancel")])
-    return InlineKeyboardMarkup(rows)
-
-
 def date_keyboard():
-    """Step 6 — next 30 days as inline buttons, 3 per row."""
+    """Step 3 of 5 — next 30 days, 3 per row."""
     today = date.today()
     days = [today + timedelta(days=i) for i in range(30)]
     rows = []
@@ -217,22 +285,37 @@ def date_keyboard():
 
 
 def time_keyboard():
-    """Step 7 — time slots, 2 per row."""
+    """Step 3 of 5 — 8 time slots, 2 per row (matches website exactly)."""
     rows = []
     for i in range(0, len(TIME_SLOTS), 2):
         row = [InlineKeyboardButton(TIME_SLOTS[i], callback_data=f"time:{TIME_SLOTS[i]}")]
         if i + 1 < len(TIME_SLOTS):
-            row.append(InlineKeyboardButton(TIME_SLOTS[i+1], callback_data=f"time:{TIME_SLOTS[i+1]}"))
+            row.append(InlineKeyboardButton(TIME_SLOTS[i + 1], callback_data=f"time:{TIME_SLOTS[i + 1]}"))
         rows.append(row)
     rows.append([InlineKeyboardButton("❌ Cancel Booking", callback_data="book:cancel")])
     return InlineKeyboardMarkup(rows)
 
 
 def confirm_keyboard():
-    """Step 8 — final confirm."""
+    """Step 4 of 5 — requires acknowledgment before final confirm."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("☑️ I confirm all information is correct", callback_data="book:acknowledged")],
+        [InlineKeyboardButton("← Back", callback_data="book:back_to_time")],
+    ])
+
+
+def confirm_ready_keyboard():
+    """Step 4 of 5 — shown after acknowledgment checkbox is ticked."""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("✅ Confirm Booking", callback_data="book:confirm")],
-        [InlineKeyboardButton("❌ Cancel Booking",  callback_data="book:cancel")],
+        [InlineKeyboardButton("← Back",             callback_data="book:back_to_time")],
+    ])
+
+
+def upload_keyboard():
+    """Step 5 of 5 — prompt to send payment screenshot."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("❌ Cancel Booking", callback_data="book:cancel")],
     ])
 
 
@@ -273,35 +356,47 @@ async def nav_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
             parse_mode="MarkdownV2",
             reply_markup=main_menu_keyboard(),
         )
+
     elif dest == "services":
         await query.edit_message_text(
             SERVICES_TEXT,
             parse_mode="MarkdownV2",
             reply_markup=services_display_keyboard(),
         )
+
     elif dest == "about":
         await query.edit_message_text(
             ABOUT_TEXT,
             parse_mode="MarkdownV2",
-            reply_markup=back_with_book_keyboard(),
+            reply_markup=about_keyboard(),
         )
+
+    elif dest == "team":
+        await query.edit_message_text(
+            TEAM_TEXT,
+            parse_mode="MarkdownV2",
+            reply_markup=team_keyboard(),
+        )
+
     elif dest == "contact":
         await query.edit_message_text(
             CONTACT_TEXT,
             parse_mode="MarkdownV2",
-            reply_markup=back_with_book_keyboard(),
+            reply_markup=contact_keyboard(),
         )
+
     return MAIN_MENU
 
 
-# ── Booking: step 1 — service selection ──────────────────────────────────────
+# ── Booking: step 1 of 5 — service selection ─────────────────────────────────
 
 async def book_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
     context.user_data.pop("booking", None)
     await query.edit_message_text(
-        "📅 *Book an Appointment*\n\n_Step 1 of 7_ — Please choose a service:",
+        "📅 *Book an Appointment*\n\n"
+        "_Step 1 of 5_ — Please choose a service\\:",
         parse_mode="MarkdownV2",
         reply_markup=booking_services_keyboard(),
     )
@@ -314,57 +409,95 @@ async def book_service_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE
     service = query.data.split(":", 1)[1]
     context.user_data.setdefault("booking", {})["service"] = service
     await query.edit_message_text(
-        f"✅ Service: *{esc(service)}*\n\n"
-        "_Step 2 of 7_ — Please enter your *full name*\\.\n\n"
+        f"✅ *Service:* {esc(service)}\n\n"
+        "_Step 2 of 5_ — Please enter your *full name*\\.\n\n"
         "📝 Example: `John Doe`",
         parse_mode="MarkdownV2",
     )
     return BOOK_FULL_NAME
 
 
-# ── Booking: step 2 — full name ───────────────────────────────────────────────
+# ── Booking: step 2 of 5 — personal info (name / email / phone / notes) ──────
 
 async def book_got_fullname(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     full_name = update.message.text.strip()
     context.user_data.setdefault("booking", {})["full_name"] = full_name
     await update.message.reply_text(
-        f"✅ Name: *{esc(full_name)}*\n\n"
-        "_Step 3 of 7_ — Please enter your *email address*\\.\n\n"
+        f"✅ *Name:* {esc(full_name)}\n\n"
+        "_Step 2 of 5_ — Please enter your *email address*\\.\n\n"
         "📝 Example: `johndoe@email.com`",
         parse_mode="MarkdownV2",
     )
     return BOOK_EMAIL
 
 
-# ── Booking: step 3 — email ───────────────────────────────────────────────────
-
 async def book_got_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     email = update.message.text.strip()
     context.user_data.setdefault("booking", {})["email"] = email
     await update.message.reply_text(
-        f"✅ Email: *{esc(email)}*\n\n"
-        "_Step 4 of 7_ — Please enter your *phone number*\\.\n\n"
-        "📝 Example: `+251911223344` or `+251711223344`",
+        f"✅ *Email:* {esc(email)}\n\n"
+        "_Step 2 of 5_ — Please enter your *phone number*\\.\n\n"
+        "📝 Example: `+251911223344`",
         parse_mode="MarkdownV2",
     )
     return BOOK_PHONE
 
 
-# ── Booking: step 4 — phone ───────────────────────────────────────────────────
-
 async def book_got_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     phone = update.message.text.strip()
     context.user_data.setdefault("booking", {})["phone"] = phone
     await update.message.reply_text(
-        f"✅ Phone: *{esc(phone)}*\n\n"
-        "_Step 5 of 7_ — Please select your *payment bank*\\:",
+        f"✅ *Phone:* {esc(phone)}\n\n"
+        "_Step 2 of 5_ — Any *optional notes* or requests for your appointment?\n\n"
+        "📝 Example: `I have a fear of needles` — or tap *Skip* below\\.",
         parse_mode="MarkdownV2",
-        reply_markup=bank_keyboard(),
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("⏭️ Skip", callback_data="book:skip_notes")],
+            [InlineKeyboardButton("❌ Cancel Booking", callback_data="book:cancel")],
+        ]),
     )
+    return BOOK_NOTES
+
+
+async def book_got_notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """User typed optional notes."""
+    notes = update.message.text.strip()
+    context.user_data.setdefault("booking", {})["notes"] = notes
+    return await _show_bank_selection(update, context, via_query=False)
+
+
+async def book_skip_notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """User tapped Skip on the notes step."""
+    query = update.callback_query
+    await query.answer()
+    context.user_data.setdefault("booking", {})["notes"] = ""
+    return await _show_bank_selection(update, context, via_query=True)
+
+
+async def _show_bank_selection(update, context, via_query: bool) -> int:
+    """Show bank selection — called after notes (typed or skipped)."""
+    b = context.user_data.get("booking", {})
+    text = (
+        f"✅ *Name:* {esc(b.get('full_name',''))}\n"
+        f"✅ *Phone:* {esc(b.get('phone',''))}\n\n"
+        "_Step 2 of 5_ — Please select your *payment method*\\:"
+    )
+    if via_query:
+        await update.callback_query.edit_message_text(
+            text,
+            parse_mode="MarkdownV2",
+            reply_markup=bank_keyboard(),
+        )
+    else:
+        await update.message.reply_text(
+            text,
+            parse_mode="MarkdownV2",
+            reply_markup=bank_keyboard(),
+        )
     return BOOK_BANK
 
 
-# ── Booking: step 5 — bank selection ─────────────────────────────────────────
+# ── Booking: step 2 of 5 — bank / payment selection ──────────────────────────
 
 async def book_bank_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
@@ -373,30 +506,21 @@ async def book_bank_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     account_no, account_holder = BANKS[bank_name]
     context.user_data.setdefault("booking", {})["bank"] = bank_name
 
+    # Show account details then move straight to Step 3 (Date & Time)
     await query.edit_message_text(
-        f"✅ Bank: *{esc(bank_name)}*\n\n"
-        f"_Please send your payment to the account below, then continue\\._\n\n"
+        f"✅ *Payment:* {esc(bank_name)}\n\n"
+        f"_Please send your payment to the account below, then choose your date\\._\n\n"
         f"🏦 *Account Number:*\n`{esc(account_no)}`\n\n"
         f"👤 *Account Holder:* {esc(account_holder)}\n\n"
-        f"_Tap the account number above to copy it\\._",
-        parse_mode="MarkdownV2",
-        reply_markup=bank_chosen_keyboard(bank_name),
-    )
-    return BOOK_DATE
-
-
-async def book_to_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    query = update.callback_query
-    await query.answer()
-    await query.edit_message_text(
-        "_Step 6 of 7_ — Please choose your *preferred date*\\:",
+        f"_Tap the account number above to copy it\\._\n\n"
+        "_Step 3 of 5_ — Please choose your *preferred date*\\:",
         parse_mode="MarkdownV2",
         reply_markup=date_keyboard(),
     )
     return BOOK_DATE
 
 
-# ── Booking: step 6 — date selection ─────────────────────────────────────────
+# ── Booking: step 3 of 5 — date selection ────────────────────────────────────
 
 async def book_date_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
@@ -405,16 +529,18 @@ async def book_date_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     d = date.fromisoformat(chosen_date)
     label = d.strftime("%A, %d %B %Y")
     context.user_data.setdefault("booking", {})["date"] = label
+
+    # Date selected — immediately show time slots in the same message
     await query.edit_message_text(
-        f"✅ Date: *{esc(label)}*\n\n"
-        "_Step 7 of 7_ — Please choose your *preferred time*\\:",
+        f"✅ *Date:* {esc(label)}\n\n"
+        "_Step 3 of 5_ — Please choose your *preferred time*\\:",
         parse_mode="MarkdownV2",
         reply_markup=time_keyboard(),
     )
     return BOOK_TIME
 
 
-# ── Booking: step 7 — time selection ─────────────────────────────────────────
+# ── Booking: step 3 of 5 — time selection ────────────────────────────────────
 
 async def book_time_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
@@ -423,16 +549,18 @@ async def book_time_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     context.user_data.setdefault("booking", {})["time"] = chosen_time
     b = context.user_data["booking"]
 
+    # Step 4 — show summary and ask for acknowledgment before final confirm
     summary = (
-        "📋 *Booking Summary*\n\n"
-        f"🦷 *Service:*   {esc(b['service'])}\n"
-        f"👤 *Name:*      {esc(b['full_name'])}\n"
-        f"📧 *Email:*     {esc(b['email'])}\n"
-        f"📞 *Phone:*     {esc(b['phone'])}\n"
-        f"🏦 *Bank:*      {esc(b['bank'])}\n"
-        f"📅 *Date:*      {esc(b['date'])}\n"
-        f"🕐 *Time:*      {esc(b['time'])}\n\n"
-        "_Please review your details above and tap *Confirm Booking* to finalise\\._"
+        "📋 *Booking Summary — Step 4 of 5*\n\n"
+        f"🦷 *Service:*   {esc(b.get('service',''))}\n"
+        f"👤 *Name:*      {esc(b.get('full_name',''))}\n"
+        f"📧 *Email:*     {esc(b.get('email',''))}\n"
+        f"📞 *Phone:*     {esc(b.get('phone',''))}\n"
+        + (f"📝 *Notes:*     {esc(b.get('notes',''))}\n" if b.get('notes') else "")
+        + f"🏦 *Payment:*   {esc(b.get('bank',''))}\n"
+        f"📅 *Date:*      {esc(b.get('date',''))}\n"
+        f"🕐 *Time:*      {esc(b.get('time',''))}\n\n"
+        "_Please review your details above, then tap the checkbox to confirm\\._"
     )
     await query.edit_message_text(
         summary,
@@ -442,16 +570,71 @@ async def book_time_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     return BOOK_CONFIRM
 
 
-# ── Booking: step 8 — confirm ─────────────────────────────────────────────────
+# ── Booking: step 4 of 5 — acknowledgment checkbox ───────────────────────────
 
-async def book_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def book_acknowledged(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """User ticked the 'I confirm all information is correct' checkbox."""
+    query = update.callback_query
+    await query.answer("✅ Great! Now tap Confirm Booking to finalise.")
+    b = context.user_data.get("booking", {})
+
+    summary = (
+        "📋 *Booking Summary — Step 4 of 5*\n\n"
+        f"🦷 *Service:*   {esc(b.get('service',''))}\n"
+        f"👤 *Name:*      {esc(b.get('full_name',''))}\n"
+        f"📧 *Email:*     {esc(b.get('email',''))}\n"
+        f"📞 *Phone:*     {esc(b.get('phone',''))}\n"
+        + (f"📝 *Notes:*     {esc(b.get('notes',''))}\n" if b.get('notes') else "")
+        + f"🏦 *Payment:*   {esc(b.get('bank',''))}\n"
+        f"📅 *Date:*      {esc(b.get('date',''))}\n"
+        f"🕐 *Time:*      {esc(b.get('time',''))}\n\n"
+        "☑️ _All information confirmed\\. Tap *Confirm Booking* to finalise\\._"
+    )
+    await query.edit_message_text(
+        summary,
+        parse_mode="MarkdownV2",
+        reply_markup=confirm_ready_keyboard(),
+    )
+    return BOOK_CONFIRM
+
+
+async def book_back_to_time(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Back button on confirm screen — returns to time selection."""
     query = update.callback_query
     await query.answer()
     b = context.user_data.get("booking", {})
+    await query.edit_message_text(
+        f"✅ *Date:* {esc(b.get('date',''))}\n\n"
+        "_Step 3 of 5_ — Please choose your *preferred time*\\:",
+        parse_mode="MarkdownV2",
+        reply_markup=time_keyboard(),
+    )
+    return BOOK_TIME
+
+
+async def book_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """User tapped Confirm Booking — move to Step 5: upload screenshot."""
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        "📤 *Step 5 of 5 — Upload Payment Screenshot*\n\n"
+        "Please send your payment screenshot as an *image* to confirm your appointment\\.\n\n"
+        "_Your booking will be finalised once we receive your screenshot\\._",
+        parse_mode="MarkdownV2",
+        reply_markup=upload_keyboard(),
+    )
+    return BOOK_UPLOAD
+
+
+# ── Booking: step 5 of 5 — receive payment screenshot ────────────────────────
+
+async def book_got_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """User sent a photo as payment proof — finalise booking."""
+    b = context.user_data.get("booking", {})
     name = context.user_data.get("name", "")
 
-    await query.edit_message_text(
-        f"🎉 *Booking Confirmed, {esc(name)}\\!*\n\n"
+    await update.message.reply_text(
+        f"🎉 *You're All Set, {esc(name)}\\!*\n\n"
         f"Your appointment for *{esc(b.get('service',''))}* has been received\\.\n\n"
         f"📅 *{esc(b.get('date',''))}* at *{esc(b.get('time',''))}*\n\n"
         "Our team will reach out to confirm your slot shortly\\. "
@@ -506,13 +689,12 @@ class HealthHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"OK")
 
     def log_message(self, format, *args):
-        pass  # silence noisy access logs
+        pass
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    # Start a lightweight HTTP server so Render's health checks get a 200 OK
     PORT = int(os.environ.get("PORT", 10000))
     health_server = HTTPServer(("0.0.0.0", PORT), HealthHandler)
     health_thread = threading.Thread(target=health_server.serve_forever, daemon=True)
@@ -528,9 +710,9 @@ def main() -> None:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, got_name),
             ],
             MAIN_MENU: [
-                CallbackQueryHandler(nav_handler,   pattern="^nav:"),
-                CallbackQueryHandler(book_start,    pattern="^book:start$"),
-                CallbackQueryHandler(noop_handler,  pattern="^noop$"),
+                CallbackQueryHandler(nav_handler,  pattern="^nav:"),
+                CallbackQueryHandler(book_start,   pattern="^book:start$"),
+                CallbackQueryHandler(noop_handler, pattern="^noop$"),
             ],
             BOOK_SERVICE: [
                 CallbackQueryHandler(book_service_chosen, pattern="^bsvc:"),
@@ -545,29 +727,38 @@ def main() -> None:
             BOOK_PHONE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, book_got_phone),
             ],
+            BOOK_NOTES: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, book_got_notes),
+                CallbackQueryHandler(book_skip_notes, pattern="^book:skip_notes$"),
+                CallbackQueryHandler(book_cancel,     pattern="^book:cancel$"),
+            ],
             BOOK_BANK: [
                 CallbackQueryHandler(book_bank_chosen, pattern="^bank:"),
-                CallbackQueryHandler(book_to_date,     pattern="^book:to_date$"),
                 CallbackQueryHandler(book_cancel,      pattern="^book:cancel$"),
             ],
             BOOK_DATE: [
-                CallbackQueryHandler(book_to_date,     pattern="^book:to_date$"),
                 CallbackQueryHandler(book_date_chosen, pattern="^date:"),
                 CallbackQueryHandler(book_cancel,      pattern="^book:cancel$"),
             ],
             BOOK_TIME: [
-                CallbackQueryHandler(book_time_chosen, pattern="^time:"),
-                CallbackQueryHandler(book_cancel,      pattern="^book:cancel$"),
+                CallbackQueryHandler(book_time_chosen,  pattern="^time:"),
+                CallbackQueryHandler(book_cancel,       pattern="^book:cancel$"),
             ],
             BOOK_CONFIRM: [
-                CallbackQueryHandler(book_confirm, pattern="^book:confirm$"),
-                CallbackQueryHandler(book_cancel,  pattern="^book:cancel$"),
+                CallbackQueryHandler(book_acknowledged, pattern="^book:acknowledged$"),
+                CallbackQueryHandler(book_confirm,      pattern="^book:confirm$"),
+                CallbackQueryHandler(book_back_to_time, pattern="^book:back_to_time$"),
+                CallbackQueryHandler(book_cancel,       pattern="^book:cancel$"),
+            ],
+            BOOK_UPLOAD: [
+                MessageHandler(filters.PHOTO, book_got_screenshot),
+                CallbackQueryHandler(book_cancel, pattern="^book:cancel$"),
             ],
         },
         fallbacks=[
             CommandHandler("cancel", cancel),
-            CommandHandler("start", start),
-            ],
+            CommandHandler("start",  start),
+        ],
     )
 
     app.add_handler(conv)
